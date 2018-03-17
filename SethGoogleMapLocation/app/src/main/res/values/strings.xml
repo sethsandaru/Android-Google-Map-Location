@@ -1,0 +1,11 @@
+<resources>
+    <string name="app_name">Nhom 1 Map</string>
+    <string name="marker_name">Marker page</string>
+    <string name="info_name">Info page</string>
+    <string name="infov2_name">Info v2 page</string>
+    <string name="direction_name">Direction page</string>
+
+    <string name="google_map_api_key">AIzaSyCCQa0sH8lKYjbdEPpYE1-KX24Y_3luctg</string>
+    <string name="google_direction_api_key">AIzaSyCJ2Q0eCWLnfzc8ME84C0mCmlYK-6bCnD0</string>
+    <string name="google_location_api_key">AIzaSyDdEkcke2CZgMnPqZ16zrOCL-PgvLCJaTs</string>
+</resources>

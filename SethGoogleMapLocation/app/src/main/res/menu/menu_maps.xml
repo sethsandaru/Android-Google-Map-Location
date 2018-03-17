@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item android:id="@+id/mn_marker" android:title="Map with Marker" app:showAsAction="never" />
+    <item android:id="@+id/mn_info" android:title="Map with Info" app:showAsAction="never" />
+    <item android:id="@+id/mn_info2" android:title="Map with Info v2" app:showAsAction="never" />
+    <item android:id="@+id/mn_direction" android:title="Map Direction" app:showAsAction="never" />
+    <item android:id="@+id/mn_location" android:title="Map Location" app:showAsAction="never" />
+</menu>
