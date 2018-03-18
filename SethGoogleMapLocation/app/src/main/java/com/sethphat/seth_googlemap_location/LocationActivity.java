@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -34,7 +35,15 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.maps.GeoApiContext;
+import com.google.maps.NearbySearchRequest;
+import com.google.maps.PendingResult;
+import com.google.maps.PlacesApi;
+import com.google.maps.model.PlaceType;
+import com.google.maps.model.PlacesSearchResponse;
+import com.google.maps.model.PlacesSearchResult;
 import com.sethphat.seth_googlemap_location.HttpRequest.HttpRequestHelper;
+import com.sethphat.seth_googlemap_location.HttpRequest.ImageHelper;
 import com.sethphat.seth_googlemap_location.Models.InfoLocation;
 
 import org.json.JSONArray;
@@ -50,11 +59,15 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     private ArrayList<String> listLocation = new ArrayList<String>();
     private GoogleMap map = null;
     private boolean canUseModule = true;
+    private GeoApiContext apiContext;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.location_layout);
+
+        // create api
+        apiContext = new GeoApiContext.Builder().apiKey(getString(R.string.google_location_api_key)).build();
 
         // add location that supported
         listLocation.add("ATM");
@@ -138,7 +151,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         // set view
         dialog.setView(v);
 
-        dialog.setPositiveButton("Select", new DialogInterface.OnClickListener() {
+        AlertDialog.Builder select = dialog.setPositiveButton("Select", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int x) {
                 int radius = 0;
@@ -148,13 +161,39 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 // clear map
                 map.clear();
 
-                String type = getType((String) spnLocation.getSelectedItem());
+                PlaceType type = getType((String) spnLocation.getSelectedItem());
 
                 // current location
                 Location location = getMyLocation();
 
-                String lattLong = location.getLatitude() + "," + location.getLongitude();
+                // request API Places now
+                NearbySearchRequest placesApi = PlacesApi.nearbySearchQuery(apiContext, new com.google.maps.model.LatLng(location.getLatitude(), location.getLongitude()));
+                placesApi.radius(radius);
+                placesApi.type(type);
+                placesApi.setCallback(new PendingResult.Callback<PlacesSearchResponse>() {
+                    @Override
+                    public void onResult(final PlacesSearchResponse result) {
+                        LocationActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                LocationActivity.this.addToMapByAPI(result.results);
+                            }
+                        });
+                    }
 
+                    @Override
+                    public void onFailure(final Throwable e) {
+                        LocationActivity.this.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                Toast.makeText(LocationActivity.this, "Failed to get location, error code #1:" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        });
+                    }
+                });
+
+                //String lattLong = location.getLatitude() + "," + location.getLongitude();
+                /*
                 // query now
                 String url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json?";
                 url = String.format(url + "key=%s&location=%s&radius=%d&type=%s", getString(R.string.google_location_api_key), lattLong, radius, type);
@@ -166,7 +205,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                     }
                 });
                 request.execute(url);
-
+                */
             }
         });
 
@@ -175,6 +214,29 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         dialog.show();
     }
 
+    private void addToMapByAPI(PlacesSearchResult[] results)
+    {
+        if (results.length == 0)
+        {
+            Toast.makeText(LocationActivity.this, "No nearby found!", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // fetch
+        for (PlacesSearchResult item : results)
+        {
+            double lat = item.geometry.location.lat;
+            double lng = item.geometry.location.lng;
+
+            Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(lat, lng)).title(item.name).snippet(item.vicinity));
+            new ImageHelper().execute(marker, item.icon);
+        }
+    }
+
+    /**
+     * JSON Add to map
+     * @param output
+     */
     private void addToMap(String output) {
 
         if (output == null)
@@ -228,18 +290,18 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
-    private String getType(String text)
+    private PlaceType getType(String text)
     {
         switch (text)
         {
-            case "ATM": return "atm";
-            case "Hospital": return "hospital";
-            case "Bank": return "bank";
-            case "Bus station": return "bus_station";
-            case "Shopping mall": return "shopping_mall";
-            case "Gym": return "gym";
-            case "Cafe": return "cafe";
-            default: return "cafe";
+            case "ATM": return PlaceType.ATM;
+            case "Hospital": return PlaceType.HOSPITAL;
+            case "Bank": return PlaceType.BANK;
+            case "Bus station": return PlaceType.BUS_STATION;
+            case "Shopping mall": return PlaceType.SHOPPING_MALL;
+            case "Gym": return PlaceType.GYM;
+            case "Cafe": return PlaceType.CAFE;
+            default: return PlaceType.CAFE;
         }
     }
 

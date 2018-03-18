@@ -24,6 +24,8 @@ dependencies {
     implementation 'com.android.support.constraint:constraint-layout:1.0.2'
     implementation 'com.google.android.gms:play-services-maps:11.8.0'
     implementation 'com.akexorcist:googledirectionlibrary:1.1.1'
+    implementation 'com.google.maps:google-maps-services:0.2.6'
+    implementation 'org.slf4j:slf4j-nop:1.7.25'
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
