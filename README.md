@@ -7,6 +7,9 @@ In this project, I researched how to implement the Google Maps API into an andro
 1. Android (API 18+)
 2. Java
 3. Google Maps API (Async map, newest)
-4. Google Location API (WebService API, newest)
+4. Google Location API (Google Map Services - Java client)
 
-Copyright by Phat Tran Minh 2018.
+## Note:
++ Please use Android Studio 3.x to open this project, lower version can't open this project :D
+
+Copyright &copy; by Phat Tran Minh 2018. All right reserved!
