@@ -10,6 +10,7 @@ import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
@@ -28,6 +29,8 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
@@ -35,6 +38,8 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.maps.GeoApiContext;
 import com.google.maps.NearbySearchRequest;
 import com.google.maps.PendingResult;
@@ -45,6 +50,7 @@ import com.google.maps.model.PlacesSearchResult;
 import com.sethphat.seth_googlemap_location.HttpRequest.HttpRequestHelper;
 import com.sethphat.seth_googlemap_location.HttpRequest.ImageHelper;
 import com.sethphat.seth_googlemap_location.Models.InfoLocation;
+
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -60,6 +66,11 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     private GoogleMap map = null;
     private boolean canUseModule = true;
     private GeoApiContext apiContext;
+    private LatLng myLocation;
+
+    // define...
+    private FusedLocationProviderClient mFusedLocationProviderClient;
+    private Location mLastKnownLocation;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +93,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.maps_marker);
         mapFragment.getMapAsync(this);
+
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
     }
 
     /*
@@ -97,6 +110,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         // check location
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             map.setMyLocationEnabled(true);
+            getDeviceLocation();
         }
         else {
             Toast.makeText(this, "Please grant us the permission to use your location, otherwise you can't use this module!", Toast.LENGTH_SHORT).show();
@@ -164,7 +178,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 PlaceType type = getType((String) spnLocation.getSelectedItem());
 
                 // current location
-                Location location = getMyLocation();
+                Location location = mLastKnownLocation;
 
                 // request API Places now
                 NearbySearchRequest placesApi = PlacesApi.nearbySearchQuery(apiContext, new com.google.maps.model.LatLng(location.getLatitude(), location.getLongitude()));
@@ -307,7 +321,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
     private Location getMyLocation() {
         LocationManager lm = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-        Location myLocation = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        Location myLocation = map.getMyLocation();
         if (myLocation == null) {
             Criteria criteria = new Criteria();
             criteria.setAccuracy(Criteria.ACCURACY_COARSE);
@@ -316,5 +330,33 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         }
         return myLocation;
     }
+
+    /**
+     * Gets the current location of the device, and positions the map's camera.
+     */
+    private void getDeviceLocation() {
+        /*
+         * Get the best and most recent location of the device, which may be null in rare
+         * cases when a location is not available.
+         */
+        try {
+            Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
+            locationResult.addOnCompleteListener(this, new OnCompleteListener<Location>() {
+                @Override
+                public void onComplete(@NonNull Task<Location> task) {
+                    if (task.isSuccessful()) {
+                        // Set the map's camera position to the current location of the device.
+                        mLastKnownLocation = task.getResult();
+                    } else {
+                        Log.d("LOCATION_FAILED", "GET LOCATION FAILED");
+                    }
+                }
+            });
+
+        } catch (SecurityException e) {
+            Log.e("Exception: %s", e.getMessage());
+        }
+    }
+
 
 }
