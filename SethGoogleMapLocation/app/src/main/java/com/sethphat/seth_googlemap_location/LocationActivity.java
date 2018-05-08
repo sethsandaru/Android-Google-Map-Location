@@ -60,7 +60,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
-public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback {
+public class LocationActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapLongClickListener {
 
     private ArrayList<String> listLocation = new ArrayList<String>();
     private GoogleMap map = null;
@@ -71,6 +71,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     // define...
     private FusedLocationProviderClient mFusedLocationProviderClient;
     private Location mLastKnownLocation;
+    private ArrayList<Marker> founded_place = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -116,6 +117,10 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
             Toast.makeText(this, "Please grant us the permission to use your location, otherwise you can't use this module!", Toast.LENGTH_SHORT).show();
             canUseModule = false;
         }
+
+
+        // event
+        map.setOnMapLongClickListener(this);
     }
 
     @Override
@@ -237,6 +242,7 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         }
 
         // fetch
+        founded_place.clear();
         for (PlacesSearchResult item : results)
         {
             double lat = item.geometry.location.lat;
@@ -244,6 +250,8 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
             Marker marker = map.addMarker(new MarkerOptions().position(new LatLng(lat, lng)).title(item.name).snippet(item.vicinity));
             new ImageHelper().execute(marker, item.icon);
+
+            founded_place.add(marker);
         }
     }
 
@@ -319,18 +327,6 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
-    private Location getMyLocation() {
-        LocationManager lm = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
-        Location myLocation = map.getMyLocation();
-        if (myLocation == null) {
-            Criteria criteria = new Criteria();
-            criteria.setAccuracy(Criteria.ACCURACY_COARSE);
-            String provider = lm.getBestProvider(criteria, true);
-            myLocation = lm.getLastKnownLocation(provider);
-        }
-        return myLocation;
-    }
-
     /**
      * Gets the current location of the device, and positions the map's camera.
      */
@@ -358,5 +354,49 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
         }
     }
 
+    private String[] supported_banks = new String[] {
+        "Agribank",
+        "Vietcombank",
+        "Vietinbank",
+        "DongA",
+    };
 
+    @Override
+    public void onMapLongClick(LatLng latLng) {
+        if (founded_place == null)
+        {
+            return;
+        }
+
+        AlertDialog.Builder dialog = new AlertDialog.Builder(this);
+
+        dialog.setTitle("Filter by name");
+
+        View v = getLayoutInflater().inflate(R.layout.dialog_filter_location, null);
+        final Spinner spnLocation = (Spinner) v.findViewById(R.id.spnLocation);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, supported_banks);
+        spnLocation.setAdapter(adapter);
+
+        dialog.setView(v);
+        dialog.setPositiveButton("Filter", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                String selected = (String) spnLocation.getSelectedItem();
+
+                // filter now
+                for (Marker item : founded_place)
+                {
+                    if (item.getTitle().indexOf(selected) < 0)
+                    {
+                        item.remove();
+                    }
+                }
+
+                Toast.makeText(LocationActivity.this, "Filtered result!!", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        dialog.setNegativeButton("Cancel", null);
+        dialog.show();
+    }
 }
